@@ -24,8 +24,19 @@ export default function LoginPage() {
         });
 
         if (result?.error) {
+            // 1. 設定錯誤訊息 (讓介面顯示紅框)
             setError('帳號或密碼錯誤');
-            setIsLoading(false);
+
+            // 2. [新增] 彈出視窗警告
+            alert('帳號或密碼錯誤！\n\n系統將於 5 秒後自動重新整理。');
+
+            // 3. [新增] 設定 5 秒後重新整理頁面
+            setTimeout(() => {
+                window.location.reload();
+            }, 5000);
+
+            // 注意：這裡不將 isLoading 設回 false，因為我們要讓它轉圈圈直到頁面重整，
+            // 避免使用者在重整前又一直狂按按鈕。
         } else {
             // 登入成功，跳轉回首頁
             router.push('/');
@@ -46,8 +57,8 @@ export default function LoginPage() {
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {error && (
-                        <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg text-center border border-red-200">
-                            {error}
+                        <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg text-center border border-red-200 animate-pulse">
+                            {error} (即將重新整理...)
                         </div>
                     )}
 
@@ -57,9 +68,11 @@ export default function LoginPage() {
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            placeholder="tutor1@example.com" // 提示預設帳號
+                            placeholder="tutor1@example.com"
                             className="w-full p-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                             required
+                            // 當正在載入或報錯等待重整時，鎖定輸入框
+                            disabled={isLoading}
                         />
                     </div>
 
@@ -69,9 +82,10 @@ export default function LoginPage() {
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="password123" // 提示預設密碼
+                            placeholder="password123"
                             className="w-full p-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                             required
+                            disabled={isLoading}
                         />
                     </div>
 
