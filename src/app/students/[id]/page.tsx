@@ -124,8 +124,20 @@ export default async function StudentDetailsPage({ params }: { params: Promise<{
                             </div>
 
                             <div className="flex-1 w-full">
-                                <label className="block text-xs font-medium text-gray-500 mb-1">時間</label>
+                                <label className="block text-xs font-medium text-gray-500 mb-1">開始時間</label>
                                 <input type="time" name="time" defaultValue="19:00" className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900" />
+                            </div>
+
+                            {/* [新增] 上課時長選擇 */}
+                            <div className="flex-1 w-full">
+                                <label className="block text-xs font-medium text-gray-500 mb-1">時長</label>
+                                <select name="duration" className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900">
+                                    <option value="60">1 小時</option>
+                                    <option value="90">1.5 小時</option>
+                                    <option value="120">2 小時</option>
+                                    <option value="150">2.5 小時</option>
+                                    <option value="180">3 小時</option>
+                                </select>
                             </div>
 
                             <div className="flex-1 w-full">
@@ -136,7 +148,7 @@ export default async function StudentDetailsPage({ params }: { params: Promise<{
                                 </select>
                             </div>
 
-                            <button type="submit" className="w-full md:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+                            <button type="submit" className="w-full md:w-auto px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors whitespace-nowrap">
                                 生成課表
                             </button>
                         </form>

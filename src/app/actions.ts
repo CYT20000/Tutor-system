@@ -235,27 +235,27 @@ export async function updateStudent(formData: FormData) {
     redirect(`/students/${id}`);
 }
 
-// 7. [新增] 設定固定課表並生成課程
+// [修正版] 設定固定課表並生成課程 (加入自訂時長與時區校正)
 export async function generateRecurringLessons(formData: FormData) {
     const studentId = formData.get('studentId') as string;
     const dayOfWeek = parseInt(formData.get('dayOfWeek') as string); // 0=週日, 1=週一...
     const timeStr = formData.get('time') as string; // "19:00"
-    const duration = 60; // 預設 60 分鐘
+
+    // [修改] 讀取使用者選擇的時長,如果沒選則預設 60 分鐘
+    const durationStr = formData.get('duration') as string;
+    const duration = durationStr ? parseInt(durationStr) : 60;
+
     const subject = formData.get('subject') as string;
 
-    // 1. 儲存這個設定到 StudentProfile
-    const scheduleSetting = JSON.stringify([{ day: dayOfWeek, time: timeStr, subject }]);
+    // 1. 儲存設定 (將 duration 也存進去,方便以後擴充功能)
+    const scheduleSetting = JSON.stringify([{ day: dayOfWeek, time: timeStr, duration, subject }]);
     await prisma.studentProfile.update({
         where: { id: studentId },
         data: { fixedSchedule: scheduleSetting }
     });
 
-    // 2. 批量生成未來 3 個月 (12週) 的課程
-    const tutorUser = await prisma.user.findFirst({
-        where: { role: 'TUTOR' },
-        include: { tutorProfile: true }
-    });
-
+    // 2. 批量生成未來 3 個月 (12週)
+    const tutorUser = await prisma.user.findFirst({ where: { role: 'TUTOR' }, include: { tutorProfile: true } });
     if (!tutorUser?.tutorProfile) throw new Error('找不到導師');
 
     const lessonsToCreate = [];
@@ -266,14 +266,20 @@ export async function generateRecurringLessons(formData: FormData) {
         currentDate.setDate(currentDate.getDate() + 1);
     }
 
-    // 往後推 12 週
+    // 解析輸入的時間
+    const [hours, minutes] = timeStr.split(':').map(Number);
+
+    // 設定時區校正 (台灣是 UTC+8,所以我們要減 8 小時存入 DB)
+    const TAIWAN_OFFSET = 8;
+
     for (let i = 0; i < 12; i++) {
         // 設定開始時間
         const lessonStart = new Date(currentDate);
-        const [hours, minutes] = timeStr.split(':').map(Number);
-        lessonStart.setHours(hours, minutes, 0, 0);
 
-        // 設定結束時間
+        // 進行時區校正
+        lessonStart.setHours(hours - TAIWAN_OFFSET, minutes, 0, 0);
+
+        // 設定結束時間：開始時間 + 選擇的分鐘數
         const lessonEnd = new Date(lessonStart.getTime() + duration * 60 * 1000);
 
         lessonsToCreate.push({
@@ -285,14 +291,13 @@ export async function generateRecurringLessons(formData: FormData) {
             status: 'NORMAL',
             content: '',
             tags: '[]',
-            isCompleted: false // [關鍵] 剛生成的只是排程，還沒上課
+            isCompleted: false
         });
 
         // 下一週
         currentDate.setDate(currentDate.getDate() + 7);
     }
 
-    // 寫入資料庫
     await prisma.lesson.createMany({
         data: lessonsToCreate
     });
@@ -300,7 +305,8 @@ export async function generateRecurringLessons(formData: FormData) {
     revalidatePath(`/students/${studentId}`);
     revalidatePath('/schedule');
     revalidatePath('/lessons');
-    redirect(`/students/${studentId}`);
+    revalidatePath('/');
+    revalidatePath('/course-changes');
 }
 
 // 8. [新增] 處理課程異動 (取消或調課)
