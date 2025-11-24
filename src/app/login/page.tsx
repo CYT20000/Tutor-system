@@ -13,13 +13,12 @@ export default function LoginPage() {
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault(); // 防止表單預設刷新
+        e.preventDefault();
         setIsLoading(true);
         setError('');
 
-        // 執行登入驗證
         const result = await signIn('credentials', {
-            redirect: false, // 我們手動處理跳轉
+            redirect: false,
             email,
             password,
         });
@@ -27,17 +26,21 @@ export default function LoginPage() {
         if (result?.error) {
             // --- 失敗流程 ---
             setError('帳號或密碼錯誤');
-            alert('帳號或密碼錯誤！\n\n系統將於 5 秒後自動重新整理。');
+
+            // [修改] 依照您的要求,彈出視窗顯示特定文字
+            alert('帳號或密碼錯誤');
+
+            // 維持 5 秒後自動重新整理的機制
             setTimeout(() => {
                 window.location.reload();
             }, 5000);
-            // 這裡保持 loading 狀態，避免使用者重複點擊
         } else {
             // --- 成功流程 ---
-            // 1. 使用 replace 取代目前的歷史紀錄 (這樣按上一頁不會回到登入頁)
-            router.replace('/');
+            // [新增] 成功時先彈出視窗
+            alert('登入成功！');
 
-            // 2. 重新整理路由快取，確保儀表板能抓到最新的登入狀態
+            // 按下確定後,跳轉至首頁
+            router.replace('/');
             router.refresh();
         }
     };
@@ -53,11 +56,10 @@ export default function LoginPage() {
                     <p className="text-gray-500 text-sm mt-2">請登入以管理課程與學生</p>
                 </div>
 
-                {/* 關鍵：使用 form 標籤並設定 onSubmit，這樣在密碼欄按 Enter 也能觸發登入 */}
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {error && (
                         <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg text-center border border-red-200 animate-pulse">
-                            {error} (即將重新整理...)
+                            {error} (系統將於 5 秒後自動重新整理...)
                         </div>
                     )}
 
