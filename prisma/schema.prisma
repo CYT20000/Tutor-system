@@ -5,8 +5,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql" // [修改 1] 從 sqlite 改成 postgresql
+  url       = env("DATABASE_URL") // [保留] 掛號櫃台
+  directUrl = env("DIRECT_URL")   // [新增] 醫生通道
 }
 
 // 注意：因為 SQLite 不支援 Enum，以下欄位都改為 String，預設值加上引號
