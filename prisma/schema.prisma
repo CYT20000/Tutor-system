@@ -1,0 +1,153 @@
+// schema.prisma (SQLite 修正版)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// 注意：因為 SQLite 不支援 Enum，以下欄位都改為 String，預設值加上引號
+
+// 1. 系統使用者 (核心帳號)
+model User {
+  id            String    @id @default(uuid())
+  name          String
+  email         String    @unique
+  password      String    
+  phone         String?   
+  role          String    @default("STUDENT") // 選項: TUTOR, STUDENT, PARENT
+  avatarUrl     String?   
+  
+  // 關聯
+  tutorProfile    TutorProfile?
+  studentProfile  StudentProfile?
+  
+  // 通知的關聯
+  notifications   Notification[]
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+
+// 2. 導師資料 (Tutor)
+model TutorProfile {
+  id            String  @id @default(uuid())
+  userId        String  @unique
+  user          User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  bio           String? 
+  subjects      String? 
+  availability  String? // JSON String
+  
+  students      StudentProfile[]
+  lessons       Lesson[]
+}
+
+// 3. 學生資料 (Student)
+model StudentProfile {
+  id              String  @id @default(uuid())
+  userId          String  @unique
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  grade           String? 
+  school          String? 
+  subjects        String? 
+  
+  // [修改] 用來存固定課表設定 (例如: 每週一 19:00)
+  // 格式範例: [{"day": 1, "time": "19:00", "duration": 60}, {"day": 3, "time": "18:00"}]
+  fixedSchedule   String? 
+  
+  parentPhone     String?
+  parentEmail     String? 
+  locationUrl     String? 
+  
+  tutorId         String?
+  tutor           TutorProfile? @relation(fields: [tutorId], references: [id])
+  
+  lessons         Lesson[]
+  exams           Exam[]
+  assignments     Assignment[]
+}
+
+// 4. 課程紀錄 (Lesson)
+model Lesson {
+  id          String   @id @default(uuid())
+  startTime   DateTime 
+  endTime     DateTime 
+  
+  subject     String   @default("一般")
+  content     String?  
+  homework    String?  
+  nextExamScope String? 
+  note        String?  
+  tags        String?  
+  
+  // [新增] 課程狀態：NORMAL(正常), CANCELLED(取消), RESCHEDULED(已調課)
+  status      String   @default("NORMAL") 
+  
+  // [新增] 是否已填寫紀錄 (預設為 false，代表只是排程)
+  isCompleted Boolean  @default(false)
+  
+  tutorId     String
+  tutor       TutorProfile   @relation(fields: [tutorId], references: [id])
+  
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// 5. 考試/段考 (Exam)
+model Exam {
+  id          String   @id @default(uuid())
+  title       String   
+  date        DateTime 
+  range       String?  
+  score       Int?     
+  
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+}
+
+// 6. 作業 (Assignment)
+model Assignment {
+  id          String   @id @default(uuid())
+  title       String
+  description String?  
+  dueDate     DateTime 
+  status      String   @default("PENDING") // 選項: PENDING, SUBMITTED, GRADED, OVERDUE
+  
+  studentId   String
+  student     StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+
+
+// 8. 站內通知 (Notification)
+model Notification {
+  id        String   @id @default(uuid())
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  type      String   
+  
+  userId    String   
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  createdAt DateTime @default(now())
+}
+
+// 9. 系統設定 (SystemSettings)
+model SystemSetting {
+  key       String   @id 
+  value     String   
+}
