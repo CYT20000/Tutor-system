@@ -13,33 +13,31 @@ export default function LoginPage() {
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
+        e.preventDefault(); // 防止表單預設刷新
         setIsLoading(true);
         setError('');
 
+        // 執行登入驗證
         const result = await signIn('credentials', {
-            redirect: false,
+            redirect: false, // 我們手動處理跳轉
             email,
             password,
         });
 
         if (result?.error) {
-            // 1. 設定錯誤訊息 (讓介面顯示紅框)
+            // --- 失敗流程 ---
             setError('帳號或密碼錯誤');
-
-            // 2. [新增] 彈出視窗警告
             alert('帳號或密碼錯誤！\n\n系統將於 5 秒後自動重新整理。');
-
-            // 3. [新增] 設定 5 秒後重新整理頁面
             setTimeout(() => {
                 window.location.reload();
             }, 5000);
-
-            // 注意：這裡不將 isLoading 設回 false，因為我們要讓它轉圈圈直到頁面重整，
-            // 避免使用者在重整前又一直狂按按鈕。
+            // 這裡保持 loading 狀態，避免使用者重複點擊
         } else {
-            // 登入成功，跳轉回首頁
-            router.push('/');
+            // --- 成功流程 ---
+            // 1. 使用 replace 取代目前的歷史紀錄 (這樣按上一頁不會回到登入頁)
+            router.replace('/');
+
+            // 2. 重新整理路由快取，確保儀表板能抓到最新的登入狀態
             router.refresh();
         }
     };
@@ -55,6 +53,7 @@ export default function LoginPage() {
                     <p className="text-gray-500 text-sm mt-2">請登入以管理課程與學生</p>
                 </div>
 
+                {/* 關鍵：使用 form 標籤並設定 onSubmit，這樣在密碼欄按 Enter 也能觸發登入 */}
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {error && (
                         <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg text-center border border-red-200 animate-pulse">
@@ -71,7 +70,6 @@ export default function LoginPage() {
                             placeholder="tutor1@example.com"
                             className="w-full p-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                             required
-                            // 當正在載入或報錯等待重整時，鎖定輸入框
                             disabled={isLoading}
                         />
                     </div>
