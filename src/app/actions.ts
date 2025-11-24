@@ -408,3 +408,47 @@ export async function hardDeleteLesson(lessonId: string) {
         return { success: false, error: '刪除失敗' };
     }
 }
+
+// 14. 修改帳號安全性設定 (Email 與密碼)
+export async function changeSecuritySettings(formData: FormData) {
+    const oldEmail = formData.get('oldEmail') as string;
+    const oldPassword = formData.get('oldPassword') as string;
+    const newEmail = formData.get('newEmail') as string;
+    const newPassword = formData.get('newPassword') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
+
+    // 1. 驗證兩次新密碼是否相同
+    if (newPassword !== confirmPassword) {
+        return { success: false, error: '兩次新密碼輸入不一致' };
+    }
+
+    // 2. 找出目前的導師帳號
+    // (注意：這裡我們假設系統只有一位導師，若有多位應從 Session 抓 ID)
+    const tutorUser = await prisma.user.findFirst({
+        where: { role: 'TUTOR' },
+    });
+
+    if (!tutorUser) return { success: false, error: '找不到使用者' };
+
+    // 3. 驗證舊資料是否正確
+    // (比對資料庫裡的 Email 和 密碼)
+    if (tutorUser.email !== oldEmail || tutorUser.password !== oldPassword) {
+        return { success: false, error: '舊 Email 或舊密碼錯誤,驗證失敗。' };
+    }
+
+    // 4. 更新資料
+    try {
+        await prisma.user.update({
+            where: { id: tutorUser.id },
+            data: {
+                email: newEmail,
+                password: newPassword
+            }
+        });
+
+        return { success: true };
+    } catch (error) {
+        console.error('更新失敗:', error);
+        return { success: false, error: '更新失敗,可能是新 Email 已被使用。' };
+    }
+}

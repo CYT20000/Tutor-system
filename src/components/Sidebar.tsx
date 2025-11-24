@@ -1,14 +1,15 @@
-'use client'; // 這是一個客戶端元件 (因為需要知道使用者點了什麼)
+'use client';
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { signOut } from 'next-auth/react'; // [新增] 引入登出功能
 import {
     LayoutDashboard,
     Users,
     BookOpen,
     Calendar,
-    Settings,
     RefreshCw,
+    Settings,
     LogOut
 } from 'lucide-react';
 
@@ -60,7 +61,11 @@ export default function Sidebar() {
 
             {/* 底部登出區 */}
             <div className="p-4 border-t border-gray-100 dark:border-gray-800">
-                <button className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors">
+                <button
+                    // [新增] 綁定登出事件，登出後自動跳轉回 /login 頁面
+                    onClick={() => signOut({ callbackUrl: '/login' })}
+                    className="flex items-center gap-3 px-4 py-3 w-full rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20 transition-colors"
+                >
                     <LogOut size={20} />
                     登出系統
                 </button>

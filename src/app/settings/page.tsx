@@ -1,7 +1,8 @@
 import { prisma } from '@/lib/prisma';
 import { updateSettings } from '@/app/actions';
 import { Save, Download, User, ShieldAlert } from 'lucide-react';
-import ResetLessonsButton from '@/components/ResetLessonsButton'; // [新增] 引入新按鈕
+import ResetLessonsButton from '@/components/ResetLessonsButton';
+import SecuritySettingsForm from '@/components/SecuritySettingsForm'; // [新增]
 
 export default async function SettingsPage() {
     const tutorUser = await prisma.user.findFirst({
@@ -13,7 +14,6 @@ export default async function SettingsPage() {
 
     return (
         <div className="p-4 md:p-8 max-w-4xl mx-auto">
-            {/* 頁面標題 */}
             <div className="mb-8">
                 <h1 className="text-2xl font-bold text-gray-900 dark:text-white">系統設定</h1>
                 <p className="text-gray-500 text-sm mt-1">
@@ -57,7 +57,10 @@ export default async function SettingsPage() {
                     </form>
                 </section>
 
-                {/* 2. 資料備份 */}
+                {/* 2. [新增] 帳號安全設定 */}
+                <SecuritySettingsForm />
+
+                {/* 3. 資料備份 */}
                 <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm overflow-hidden">
                     <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex items-center gap-3">
                         <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-lg text-emerald-600 dark:text-emerald-400">
@@ -78,7 +81,7 @@ export default async function SettingsPage() {
                     </div>
                 </section>
 
-                {/* 3. 危險區域 */}
+                {/* 4. 危險區域 */}
                 <section className="bg-white dark:bg-gray-800 rounded-xl border border-red-200 dark:border-red-900/50 shadow-sm overflow-hidden">
                     <div className="p-6 border-b border-red-100 dark:border-red-900/30 flex items-center gap-3 bg-red-50 dark:bg-red-900/10">
                         <div className="p-2 bg-red-100 dark:bg-red-900/30 rounded-lg text-red-600 dark:text-red-400">
@@ -95,10 +98,7 @@ export default async function SettingsPage() {
                                     將刪除所有的歷史課程與未來排程。學生資料與考試成績將被保留。此動作<span className="font-bold text-red-600">無法復原</span>。
                                 </p>
                             </div>
-
-                            {/* [修改] 這裡換成了我們新的按鈕元件 */}
                             <ResetLessonsButton />
-
                         </div>
                     </div>
                 </section>
