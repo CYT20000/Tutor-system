@@ -9,7 +9,8 @@ import {
     BookOpen,
     Calendar,
     RefreshCw,
-    LogOut
+    LogOut,
+    Bot
 } from 'lucide-react';
 
 const menuItems = [
@@ -18,6 +19,7 @@ const menuItems = [
     { name: '課程', href: '/lessons', icon: BookOpen },
     { name: '行事曆', href: '/schedule', icon: Calendar },
     { name: '異動', href: '/course-changes', icon: RefreshCw },
+    { name: 'AI', href: '/ai-agent', icon: Bot },
 ];
 
 export default function MobileNav() {
@@ -53,8 +55,8 @@ export default function MobileNav() {
                                 key={item.href}
                                 href={item.href}
                                 className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${isActive
-                                        ? 'text-blue-600 dark:text-blue-400'
-                                        : 'text-gray-500 dark:text-gray-400'
+                                    ? 'text-blue-600 dark:text-blue-400'
+                                    : 'text-gray-500 dark:text-gray-400'
                                     }`}
                             >
                                 <Icon size={20} strokeWidth={isActive ? 2.5 : 2} />
@@ -67,8 +69,8 @@ export default function MobileNav() {
                     <Link
                         href="/settings"
                         className={`flex flex-col items-center justify-center w-full h-full space-y-1 ${pathname === '/settings'
-                                ? 'text-blue-600 dark:text-blue-400'
-                                : 'text-gray-500 dark:text-gray-400'
+                            ? 'text-blue-600 dark:text-blue-400'
+                            : 'text-gray-500 dark:text-gray-400'
                             }`}
                     >
                         {/* 這裡用一個齒輪圖示 */}

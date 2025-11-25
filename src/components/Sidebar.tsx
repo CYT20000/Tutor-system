@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { signOut } from 'next-auth/react'; // [新增] 引入登出功能
+import { signOut } from 'next-auth/react';
 import {
     LayoutDashboard,
     Users,
@@ -10,7 +10,8 @@ import {
     Calendar,
     RefreshCw,
     Settings,
-    LogOut
+    LogOut,
+    Bot
 } from 'lucide-react';
 
 const menuItems = [
@@ -19,6 +20,7 @@ const menuItems = [
     { name: '課程紀錄', href: '/lessons', icon: BookOpen },
     { name: '行事曆', href: '/schedule', icon: Calendar },
     { name: '課程異動', href: '/course-changes', icon: RefreshCw },
+    { name: 'AI 助理', href: '/ai-agent', icon: Bot },
     { name: '系統設定', href: '/settings', icon: Settings },
 ];
 

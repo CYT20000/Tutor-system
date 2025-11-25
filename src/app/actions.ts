@@ -85,6 +85,7 @@ export async function createLesson(formData: FormData) {
     });
 
     revalidatePath('/lessons');
+    revalidatePath('/schedule'); // [新增]
     redirect('/lessons');
 }
 
@@ -105,7 +106,8 @@ export async function deleteLesson(lessonId: string) {
         });
 
         revalidatePath('/lessons');
-        revalidatePath('/schedule');
+        revalidatePath('/schedule'); // [關鍵修正]
+        revalidatePath('/');
         return { success: true };
     } catch (error) {
         console.error('重置課程失敗:', error);
@@ -145,7 +147,11 @@ export async function updateLesson(formData: FormData) {
         },
     });
 
+    // [關鍵修正] 通知所有相關頁面更新資料
     revalidatePath('/lessons');
+    revalidatePath('/schedule'); // 行事曆 (讓紅燈變綠燈)
+    revalidatePath('/');         // 儀表板
+
     redirect('/lessons');
 }
 
@@ -481,5 +487,24 @@ export async function changeSecuritySettings(formData: FormData) {
     } catch (error) {
         console.error('更新失敗:', error);
         return { success: false, error: '更新失敗,可能是新 Email 已被使用。' };
+    }
+}
+
+// 15. [新增] AI 指令執行官
+export async function executeAIAction(functionName: string, args: any) {
+    console.log(`🤖 AI 正在執行: ${functionName}`, args);
+
+    try {
+        if (functionName === 'deleteStudent') {
+            // 呼叫我們原本寫好的刪除功能
+            return await deleteStudent(args.studentId);
+        }
+
+        // 未來可以擴充更多功能，例如 createLesson...
+
+        return { success: false, error: '未知的 AI 指令' };
+    } catch (error) {
+        console.error('AI 執行失敗:', error);
+        return { success: false, error: '執行失敗' };
     }
 }

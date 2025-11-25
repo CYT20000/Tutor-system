@@ -3,32 +3,44 @@
 import { useState, useEffect } from 'react';
 import { Save } from 'lucide-react';
 
-// 定義一下我們需要的資料格式
+// 定義資料格式
 type Student = {
     id: string;
     user: { name: string };
     grade: string | null;
-    subjects: string | null; // 例如 "數學, 英文"
+    subjects: string | null;
 };
 
 type LessonFormProps = {
     students: Student[];
-    action: (formData: FormData) => Promise<void>; // Server Action
-    initialData?: any; // 編輯模式時會傳入舊資料
+    action: (formData: FormData) => Promise<void>;
+    initialData?: any; // 如果有傳這個，代表是「編輯」；沒傳就是「新增」
 };
 
 export default function LessonForm({ students, action, initialData }: LessonFormProps) {
-    // 記錄目前選到的學生 ID
     const [selectedStudentId, setSelectedStudentId] = useState<string>(initialData?.studentId || '');
-
-    // 根據選到的學生，計算出可選的科目清單
     const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
 
+    // [新增] 防呆提醒機制
+    useEffect(() => {
+        // 只有在「新增模式」(!initialData) 時才跳出提醒
+        if (!initialData) {
+            alert(
+                "⚠️ 操作提醒：關於「出現兩筆資料」的解決建議\n\n" +
+                "如果您在此頁面建立了一筆資料，系統會把它當作「額外加課」，" +
+                "所以行事曆上可能會同時出現「原本排程的紅點」和「新加的綠點」。\n\n" +
+                "💡 操作建議：\n" +
+                "1. 只要是固定排程的課，請一律從「行事曆」點擊紅點進入編輯。\n" +
+                "2. 只有當您「臨時要在額外時間加一堂原本沒有的課」時，才使用此新增功能。"
+            );
+        }
+    }, [initialData]);
+
+    // 根據選到的學生，計算出可選的科目清單
     useEffect(() => {
         if (selectedStudentId) {
             const student = students.find(s => s.id === selectedStudentId);
             if (student && student.subjects) {
-                // 把 "數學, 英文" 切割成 ["數學", "英文"]
                 setAvailableSubjects(student.subjects.split(',').map(s => s.trim()));
             } else {
                 setAvailableSubjects(['一般']);
@@ -62,7 +74,7 @@ export default function LessonForm({ students, action, initialData }: LessonForm
                     </select>
                 </div>
 
-                {/* 2. 科目選擇 (動態出現) */}
+                {/* 2. 科目選擇 */}
                 <div className="col-span-1 md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">本次上課科目</label>
                     <select
