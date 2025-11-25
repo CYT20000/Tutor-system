@@ -26,22 +26,17 @@ export default function LoginPage() {
         if (result?.error) {
             // --- 失敗流程 ---
             setError('帳號或密碼錯誤');
-
-            // [修改] 依照您的要求,彈出視窗顯示特定文字
             alert('帳號或密碼錯誤');
-
-            // 維持 5 秒後自動重新整理的機制
             setTimeout(() => {
                 window.location.reload();
             }, 5000);
         } else {
-            // --- 成功流程 ---
-            // [新增] 成功時先彈出視窗
+            // --- 成功流程 (修正版) ---
             alert('登入成功！');
 
-            // 按下確定後,跳轉至首頁
-            router.replace('/');
-            router.refresh();
+            // [關鍵修正] 改用 window.location.href 強制重新載入並跳轉
+            // 這比 router.replace 更能確保 Session 被正確讀取
+            window.location.href = '/';
         }
     };
 

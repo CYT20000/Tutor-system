@@ -235,78 +235,103 @@ export async function updateStudent(formData: FormData) {
     redirect(`/students/${id}`);
 }
 
-// [修正版] 設定固定課表並生成課程 (加入自訂時長與時區校正)
+// [優化版] 物理核心等級的排程生成邏輯 (Vectorized & Timezone-Safe)
 export async function generateRecurringLessons(formData: FormData) {
+    // 1. 輸入向量提取 (Input Vector Extraction)
     const studentId = formData.get('studentId') as string;
-    const dayOfWeek = parseInt(formData.get('dayOfWeek') as string); // 0=週日, 1=週一...
-    const timeStr = formData.get('time') as string; // "19:00"
-
-    // [修改] 讀取使用者選擇的時長,如果沒選則預設 60 分鐘
-    const durationStr = formData.get('duration') as string;
-    const duration = durationStr ? parseInt(durationStr) : 60;
-
+    const dayOfWeek = parseInt(formData.get('dayOfWeek') as string); // 0=Sun, 1=Mon...
+    const timeStr = formData.get('time') as string; // "HH:mm"
+    const duration = parseInt(formData.get('duration') as string) || 60;
     const subject = formData.get('subject') as string;
 
-    // 1. 儲存設定 (將 duration 也存進去,方便以後擴充功能)
+    // 2. 環境變數載入 (Context Loading)
+    const tutorUser = await prisma.user.findFirst({
+        where: { role: 'TUTOR' },
+        include: { tutorProfile: true }
+    });
+    if (!tutorUser?.tutorProfile) throw new Error('Simulation Context Error: Tutor not found.');
+    const tutorId = tutorUser.tutorProfile.id;
+
+    // 3. 儲存排程設定 (Persistence)
+    // 雖然這不是核心運算，但為了資料一致性仍需保留
     const scheduleSetting = JSON.stringify([{ day: dayOfWeek, time: timeStr, duration, subject }]);
     await prisma.studentProfile.update({
         where: { id: studentId },
         data: { fixedSchedule: scheduleSetting }
     });
 
-    // 2. 批量生成未來 3 個月 (12週)
-    const tutorUser = await prisma.user.findFirst({ where: { role: 'TUTOR' }, include: { tutorProfile: true } });
-    if (!tutorUser?.tutorProfile) throw new Error('找不到導師');
+    // 4. 時空校準 (Temporal Alignment - High Precision Mode)
+    // 使用 "Shifted UTC" 策略：將時間軸平移至台灣時區 (UTC+8)，在此座標系下進行計算，最後還原。
+    // 這保證了無論伺服器位於何處 (AWS US, Google TW, Localhost)，結果絕對一致。
+    const TAIWAN_OFFSET_MS = 8 * 60 * 60 * 1000;
+    const [targetHour, targetMinute] = timeStr.split(':').map(Number);
 
-    const lessonsToCreate = [];
-    let currentDate = new Date();
+    // 取得當前 "台灣時間" 的時間戳記
+    const nowMs = Date.now();
+    const nowTaiwanMs = nowMs + TAIWAN_OFFSET_MS;
 
-    // 調整到最近的該星期幾
-    while (currentDate.getDay() !== dayOfWeek) {
-        currentDate.setDate(currentDate.getDate() + 1);
+    // 計算目標日期的位移量
+    const currentTaiwanDate = new Date(nowTaiwanMs);
+    const currentDay = currentTaiwanDate.getUTCDay(); // 使用 UTC 方法讀取平移後的時間
+
+    let daysUntilTarget = (dayOfWeek - currentDay + 7) % 7;
+
+    // 如果是今天，但時間已過，則排到下週
+    const currentHour = currentTaiwanDate.getUTCHours();
+    const currentMinute = currentTaiwanDate.getUTCMinutes();
+    if (daysUntilTarget === 0) {
+        if (currentHour > targetHour || (currentHour === targetHour && currentMinute >= targetMinute)) {
+            daysUntilTarget = 7;
+        }
     }
 
-    // 解析輸入的時間
-    const [hours, minutes] = timeStr.split(':').map(Number);
+    // 計算第一堂課的 "台灣時間" 起始點
+    // 先將日期推到目標日
+    const firstLessonDateTaiwan = new Date(nowTaiwanMs + daysUntilTarget * 24 * 60 * 60 * 1000);
+    // 設定精確時間 (使用 UTC 方法操作平移後的物件)
+    firstLessonDateTaiwan.setUTCHours(targetHour, targetMinute, 0, 0);
 
-    // 設定時區校正 (台灣是 UTC+8,所以我們要減 8 小時存入 DB)
-    const TAIWAN_OFFSET = 8;
+    // 還原為真實 UTC 時間戳記 (Event Horizon)
+    const startTimestampUtc = firstLessonDateTaiwan.getTime() - TAIWAN_OFFSET_MS;
 
-    for (let i = 0; i < 12; i++) {
-        // 設定開始時間
-        const lessonStart = new Date(currentDate);
+    // 5. 向量化批量生成 (Vectorized Batch Generation)
+    // 預先計算常數，避免在迴圈中重複運算
+    const LESSON_COUNT = 12;
+    const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    const DURATION_MS = duration * 60 * 1000;
 
-        // 進行時區校正
-        lessonStart.setHours(hours - TAIWAN_OFFSET, minutes, 0, 0);
+    // 使用 Array.from 進行單次記憶體分配與映射 (Single Pass Allocation & Mapping)
+    const lessonsData = Array.from({ length: LESSON_COUNT }, (_, i) => {
+        // t = t0 + i * dt
+        const currentStartMs = startTimestampUtc + (i * ONE_WEEK_MS);
 
-        // 設定結束時間：開始時間 + 選擇的分鐘數
-        const lessonEnd = new Date(lessonStart.getTime() + duration * 60 * 1000);
-
-        lessonsToCreate.push({
-            tutorId: tutorUser.tutorProfile.id,
-            studentId: studentId,
-            subject: subject,
-            startTime: lessonStart,
-            endTime: lessonEnd,
+        return {
+            tutorId,
+            studentId,
+            subject,
+            startTime: new Date(currentStartMs),
+            endTime: new Date(currentStartMs + DURATION_MS),
             status: 'NORMAL',
             content: '',
             tags: '[]',
             isCompleted: false
-        });
-
-        // 下一週
-        currentDate.setDate(currentDate.getDate() + 7);
-    }
-
-    await prisma.lesson.createMany({
-        data: lessonsToCreate
+        };
     });
 
-    revalidatePath(`/students/${studentId}`);
-    revalidatePath('/schedule');
-    revalidatePath('/lessons');
-    revalidatePath('/');
-    revalidatePath('/course-changes');
+    // 6. 批量寫入 (Bulk I/O Flush)
+    await prisma.lesson.createMany({
+        data: lessonsData
+    });
+
+    // 7. 狀態同步 (State Synchronization)
+    const pathsToRevalidate = [
+        `/students/${studentId}`,
+        '/schedule',
+        '/lessons',
+        '/',
+        '/course-changes'
+    ];
+    pathsToRevalidate.forEach(p => revalidatePath(p));
 }
 
 // 8. [新增] 處理課程異動 (取消或調課)

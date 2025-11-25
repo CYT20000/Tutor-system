@@ -31,7 +31,7 @@ export default function RootLayout({
           {/* 主要內容區 */}
           {/* md:pl-64 是給電腦版留左邊空位 */}
           {/* pb-20 是給手機版留底部空位 (避免被導航擋住) */}
-          <main className="flex-1 md:pl-64 min-h-screen pb-20 md:pb-0">
+          <main className="flex-1 md:pl-64 min-h-screen pb-20 pt-14 md:pt-0 md:pb-0">
             {children}
           </main>
 
